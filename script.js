@@ -1,5 +1,12 @@
+/*
+    Card class
+*/
 class Card {
 
+    /*
+		@param {String} rank
+		@param {String} suit
+	*/
     constructor(rank, suit) {
         this.rank = rank;
 		this.suit = suit;
@@ -10,41 +17,43 @@ class Card {
 	*/
     getValue(currentTotal) {
 
-		if (this.rank == 'A' && currentTotal < 11){
-            this.value = 11;
-        } else if (this.rank == 'A') {
-            this.value = 1;
-		} else if (this.rank == 'J' || this.rank == 'Q' || this.rank == 'K') {
-			this.value = 10;
-		} else {
-			this.value = parseInt(this.rank);
-		}
+        let value = 0;
 
-    }
+		if (this.rank == 'A' && currentTotal < 11){
+            value = 11;
+		} else if (this.rank == 'A'){
+            value = 1;
+		} else if (this.rank == 'J' || this.rank == 'Q' || this.rank == 'K'){
+            value = 10;
+		} else {
+            value = parseInt(this.rank);
+		}
+		return value;
+	}
 
     /*
-        Renders the card
+        Renders the card in console
     */
     view() {
-        this.getValue()
-        console.group(`Card view:`)
-        console.log(`Rank: ${this.rank}`)
-        console.log(`Suit: ${this.suit}`)
-        console.log(`Value: ${this.value}`)
-        console.groupEnd()
+        console.group(`Card view:`);
+        console.log(`Rank: ${this.rank}`);
+        console.log(`Suit: ${this.suit}`);
+        console.groupEnd();
     }
 
 }
 
-
-class Player extends Card {
+/*
+    Player class
+*/
+class Player {
 
     /*
 		Constructor
 		@param {Array} hand - the array which holds all the cards
 	*/
     constructor(elem, hand) {
-        super()
+        // super()
         this.elem = elem;
         this.hand = hand;
     }
@@ -61,17 +70,16 @@ class Player extends Card {
 		the total score of all the cards in the hand of a player
 	*/
     getScore() {
-        super.getValue();
 
         let points = 0;
-		for(let i = 1; i < this.hand.length; i++){
 
-			if (i == 0) {
-                this.points = this.hand[i].getValue(0);
-            } else {
-                this.points += this.hand[i].getValue(points);
-            }
+		for(let i = 0; i < this.hand.length; i++){
+			if(i == 0) points = this.hand[i].getValue(0);
+			else points += this.hand[i].getValue(points);
 		}
+
+		return points;
+
 	}
 
     /*
@@ -80,7 +88,7 @@ class Player extends Card {
     showHand() {
 
         for(var i = 0; i < this.hand.length; i++) {
-            console.log(this.hand[i].view())
+            console.log(this.hand[i].view());
         }
 
     }
@@ -91,6 +99,9 @@ class Player extends Card {
 */
 class Deck {
 
+    /*
+		Initialise constructor
+	*/
     constructor() {
         this.ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 		this.suits = ['♥', '♦', '♣', '♠'];
@@ -121,30 +132,35 @@ class Deck {
 }
 
 
-class Game extends Deck {
+class Game {
 
-    // default generated for classes that do not have their own constructor
-    constructor(...args) {
-        super(...args);
-    }
-
+    /*
+        Start the game
+    */
     start() {
-        //initilaise and shuffle the deck of cards
-        this.__proto__.__proto__.init.call(this);
-        this.__proto__.__proto__.shuffle.call(this);
+        this.deck = new Deck();
+        this.deck.init();
+        this.deck.shuffle();
+
 
         //deal one card to dealer
-		this.dealer = new Player('dealer', [this.deck.pop()]);
+		this.dealer = new Player('dealer', [this.deck.deck.pop()]);
 
         //deal two cards to player
-		this.player = new Player('player', [this.deck.pop(), this.deck.pop()]);
+		this.player = new Player('player', [this.deck.deck.pop(), this.deck.deck.pop()]);
 
-        this.dealer.showHand()
-        this.player.showHand()
+        this.playerScore.innerHTML = this.player.getScore();
+        this.dealerScore.innerHTML = this.dealer.getScore();
+
+        this.dealer.showHand();
+        this.player.showHand();
 
         this.setMessage("Hit or Stand");
     }
 
+    /*
+        Initialise
+    */
     init() {
         this.dealerScore = document.getElementById('dealer-score').getElementsByTagName("span")[0];
         this.playerScore = document.getElementById('player-score').getElementsByTagName("span")[0];
@@ -158,6 +174,9 @@ class Game extends Deck {
         this.standButton.addEventListener('click', this.standButtonHandler.bind(this));
     }
 
+    /*
+        Deal button event handler
+    */
     dealButtonHandler() {
         this.start();
         this.dealButton.disabled = true;
@@ -165,23 +184,59 @@ class Game extends Deck {
         this.standButton.disabled = false;
     }
 
+    /*
+        Hit button event handler
+    */
     hitButtonHandler() {
         //deal a card and add to player's hand
-        let card = this.deck.pop();
+        let card = this.deck.deck.pop();
         this.player.hit(card);
 
         //render the card and score
-        // document.getElementById(this.player.elem).innerHTML += this.dealer.__proto__.__proto__.view.call(this);
-        // this.playerScore.innerHTML = this.player.getScore.call(this.player.hand);
+        card.view();
+        this.playerScore.innerHTML = this.player.getScore();
 
-        //if over, then player looses
-        if (this.player.getScore() > 21){
+        // if over, then player looses
+        if (this.player.getScore() > 21) {
             this.gameEnded('You lost!');
         }
     }
 
+    /*
+        Stand button event handler
+    */
     standButtonHandler() {
+        this.hitButton.disabled = true;
+        this.standButton.disabled = true;
 
+        //deals a card to the dealer until
+        //one of the conditions below is true
+        while(true){
+            let card = this.deck.deck.pop();
+
+            this.dealer.hit(card);
+            card.view();
+            this.dealerScore.innerHTML = this.dealer.getScore();
+
+            let playerBlackjack = this.player.getScore() == 21,
+                dealerBlackjack = this.dealer.getScore() == 21;
+
+            //Rule set
+            if(dealerBlackjack && !playerBlackjack) {
+                this.gameEnded('You lost!');
+                break;
+            } else if(dealerBlackjack && playerBlackjack) {
+                this.gameEnded('Draw!');
+                break;
+            } else if(this.dealer.getScore() > 21 && this.player.getScore() <= 21) {
+                this.gameEnded('You won!');
+                break;
+            } else if(this.dealer.getScore() > this.player.getScore() && this.dealer.getScore() <= 21 && this.player.getScore() < 21) {
+                this.gameEnded('You lost!');
+                break;
+            }
+            //TODO needs to be expanded..
+        }
     }
 
     /*
@@ -190,15 +245,19 @@ class Game extends Deck {
     setMessage(str) {
         document.getElementById('status').innerHTML = str;
     }
-    
+
+    /*
+        If the player wins or looses
+    */
+    gameEnded(str) {
+        this.setMessage(str);
+        this.dealButton.disabled = false;
+        this.hitButton.disabled = true;
+        this.standButton.disabled = true;
+    }
 }
 
-let a = new Game();
-a.start()
-console.log(a)
-
-// let deck = new Deck()
-// deck.init();
-
-// let cardJ = new Card('J', '♠');
-// let player1 = new Player('J', '♠', cardJ);
+// first initilaise
+document.addEventListener('DOMContentLoaded', (event) => {
+    new Game().init();
+});
